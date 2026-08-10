@@ -1,8 +1,16 @@
+// Port of the ferris/sweep QMK keymap
+// (qmk_firmware/keyboards/ferris/keymaps/ThalerMatthias/keymap.json,
+// pierrec83's default layout + gaming layer).
+//
+// QMK's sm_td tap-hold resolution has no ZMK equivalent; the closest match is
+// the positional hold-taps below (balanced flavor + require-prior-idle).
+
 #include <behaviors.dtsi>
 #include <dt-bindings/zmk/bt.h>
 #include <dt-bindings/zmk/keys.h>
 #include <dt-bindings/zmk/outputs.h>
 #include <dt-bindings/zmk/ext_power.h>
+#include <dt-bindings/zmk/pointing.h>
 
 //  0  1  2  3  4       5  6  7  8  9
 // 10 11 12 13 14      15 16 17 18 19
@@ -13,23 +21,25 @@
 #define RIGHT_KEYS 5 6 7 8 9 15 16 17 18 19 25 26 27 28 29
 #define RIGHT_THUMBS 32 33
 
-#define DEF 0
-#define NAV 1
-#define SYM 2
-#define NUM 3
-#define SYS 4
-#define SWP 5
-
-#define AS(keycode) &as LS(keycode) keycode     // Autoshift Macro
-
-#include "combos.dtsi"
+#define BAS 0  // base qwerty
+#define MOU 1  // mouse
+#define NAV 2  // navigation
+#define RSY 3  // right symbols
+#define LSY 4  // left symbols
+#define FUN 5  // function keys
+#define NUM 6  // numbers
+#define ALW 7  // always accessible
+#define GAM 8  // plain qwerty gaming
+#define SYS 9  // ZMK-only: bluetooth / output / power
 
 / {
     conditional_layers {
         compatible = "zmk,conditional-layers";
 
+        // ZMK addition: hold both ring-finger layer keys (S + L) for the
+        // bluetooth/system layer. The QMK board is wired and has no such layer.
         sys_layer {
-            if-layers = <NAV NUM>;
+            if-layers = <FUN NUM>;
             then-layer = <SYS>;
         };
     };
@@ -37,15 +47,6 @@
 
 / {
     behaviors {
-        as: auto_shift {
-            compatible = "zmk,behavior-hold-tap";
-            #binding-cells = <2>;
-            tapping-term-ms = <135>;
-            quick-tap-ms = <0>;
-            flavor = "tap-preferred";
-            bindings = <&kp>, <&kp>;
-        };
-
         // home row mods
         hml: home_row_mod_left {
             compatible = "zmk,behavior-hold-tap";
@@ -70,94 +71,142 @@
             hold-trigger-on-release;
         };
 
-		// one hand alt-tab / ctrl-tab
-		tabber: tabber {
-			compatible = "zmk,behavior-tri-state";
-			#binding-cells = <0>;
-			bindings = <&kt LCTRL>, <&kp TAB>, <&kt LCTRL>;
-			ignored-key-positions = <2>; // shift-tab
-		};
-		switcher: switcher {
-			compatible = "zmk,behavior-tri-state";
-			#binding-cells = <0>;
-			bindings = <&kt LALT>, <&kp GRAVE>, <&kt LALT>;
-			ignored-key-positions = <12>; // shift-grave
-		};
-		swapper: swapper {
-			compatible = "zmk,behavior-tri-state";
-			#binding-cells = <0>;
-			bindings = <&kt LALT>, <&kp TAB>, <&kt LALT>;
-			ignored-key-positions = <22>; // shift-tab
-		};
+        // home row layer-taps (QMK's LT() on the homerow), same positional logic
+        hll: home_row_layer_left {
+            compatible = "zmk,behavior-hold-tap";
+            #binding-cells = <2>;
+            flavor = "balanced";
+            require-prior-idle-ms = <175>;
+            tapping-term-ms = <280>;
+            quick-tap-ms = <175>;
+            bindings = <&mo>, <&kp>;
+            hold-trigger-key-positions = <RIGHT_KEYS RIGHT_THUMBS>;
+            hold-trigger-on-release;
+        };
+        hlr: home_row_layer_right {
+            compatible = "zmk,behavior-hold-tap";
+            #binding-cells = <2>;
+            flavor = "balanced";
+            require-prior-idle-ms = <175>;
+            tapping-term-ms = <280>;
+            quick-tap-ms = <175>;
+            bindings = <&mo>, <&kp>;
+            hold-trigger-key-positions = <LEFT_KEYS LEFT_THUMBS>;
+            hold-trigger-on-release;
+        };
     };
 
     keymap {
         compatible = "zmk,keymap";
 
-        default_layer {  //0
-			display-name = "DEF";
+        base_layer {  //0
+            display-name = "BAS";
             bindings = <
-&kp Q          &kp W        &kp E            &kp R              &kp T             /* | */        &kp Y          &kp U              &kp I            &kp O             &kp P
-&hml LGUI A    &hml LALT S  &hml LCTRL D     &hml LSHIFT F      &kp G             /* | */        &kp H          &hmr LSHIFT J      &hmr LCTRL K     &hmr LALT L       &hmr LGUI SEMI
-&lt SWP Z      &kp X        &kp C            &kp V              &kp B             /* | */        &kp N          &kp M              &kp COMMA        &kp DOT           &kp SLASH
+&kp Q          &kp W        &kp E         &kp R           &kp T          /* | */    &kp Y          &kp U          &kp I           &kp O          &kp P
+&hml LSHIFT A  &hll FUN S   &hll MOU D    &hll NAV F      &kp G          /* | */    &kp H          &hlr LSY J     &hlr RSY K      &hlr NUM L     &hmr LSHIFT SEMI
+&kp Z          &hml LCTRL X &hml LALT C   &kp V           &kp B          /* | */    &kp N          &kp M          &hmr LALT COMMA &hmr LCTRL DOT &kp FSLH
                             /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-                                             &mt RALT ESC       &lt NAV SPACE     /* | */        &lt NUM TAB    &lt SYM ENTER
+                                          &kp KP_N0       &kp BSPC       /* | */    &lt ALW SPACE  &tog GAM
             >;
         };
 
-        navigation_layer {  //1
-			display-name = "NAV";
+        mouse_layer {  //1
+            display-name = "MOU";
             bindings = <
-&kp LC(Q)     &kp LC(W)     &kp LC(E)        &kp LC(R)          &kp LC(T)          /* | */        &kp PG_UP      &kp HOME           &kp UP          &kp END            &kp LC(P)
-&kp LGUI      &sk LALT      &sk LCTRL        &sk LSHIFT         &kp LC(G)          /* | */        &kp PG_DN      &kp LEFT           &kp DOWN        &kp RIGHT          &kp LC(SEMI)
-&kp LC(Z)     &kp LC(X)     AS(LC(C))        AS(LC(V))          &kp LC(B)          /* | */        &kp LS(LC(N))  &kt LC(M)          &kp K_CONTEXT_MENU &kp LC(PERIOD)  &kp LC(SLASH)
+&trans         &trans       &trans        &trans          &trans         /* | */    &trans         &mkp LCLK      &msc SCRL_UP    &mkp RCLK      &trans
+&trans         &mkp RCLK    &none         &mkp LCLK       &trans         /* | */    &mmv MOVE_LEFT &mmv MOVE_DOWN &mmv MOVE_UP    &mmv MOVE_RIGHT &trans
+&trans         &trans       &trans        &trans          &trans         /* | */    &trans         &msc SCRL_LEFT &msc SCRL_DOWN  &msc SCRL_RIGHT &trans
                             /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-                                             &trans             &trans             /* | */        &trans         &trans
+                                          &trans          &trans         /* | */    &trans         &trans
             >;
         };
 
-        symbols_layer {  //2
-			display-name = "SYM";
+        navigation_layer {  //2
+            display-name = "NAV";
             bindings = <
-&kp EXCL      &kp AT        &kp HASH         &kp DOLLAR         &kp PERCENT        /* | */        &kp CARET      &kp AMPERSAND      &kp STAR          &kp LPAR          &kp RPAR
-&kp EQUAL     &kp PLUS      &kp MINUS        &kp UNDER          &kp LBKT           /* | */        &kp RBKT       &sk LSHIFT         &sk LCTRL         &sk LALT          &kp SQT
-&kp PIPE      &kp GRAVE     &kp SEMI         &kp LPAR           &kp LBRC           /* | */        &kp RBRC       &kp RPAR           &kp LS(SEMI)      &kp TILDE         &kp BACKSLASH
-                            /* - - - - - - - - - - - - - - -  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-                                             &trans             &trans             /* | */        &trans         &trans
-            >;
-        };
-
-        numbers-fn_layer {  //3
-			display-name = "NUM";
-            bindings = <
-&kp F1        &kp F2        &kp F3          &kp F4              &kp F22            /* | */        &kp MINUS      &kp N7            &kp N8            &kp N9            &kp STAR
-&kp F5        &kp F6        &kp F7          &kp F8              &kp F23            /* | */        &kp PLUS       &kp N4            &kp N5            &kp N6            &kp N0
-&kp F9        &kp F10       &kp F11         &kp F12             &kp F24            /* | */        &kp EQUAL      &kp N1            &kp N2            &kp N3            &kp SLASH
+&trans         &trans       &kp PG_UP     &trans          &trans         /* | */    &trans         &trans         &trans          &trans         &trans
+&trans         &kp LC(LALT) &kp LGUI      &none           &trans         /* | */    &kp LEFT       &kp DOWN       &kp UP          &kp RIGHT      &kp LC(LA(LSHIFT))
+&trans         &kp HOME     &kp PG_DN     &kp END         &trans         /* | */    &trans         &trans         &trans          &trans         &trans
                             /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-                                             &trans             &trans             /* | */        &trans         &trans
+                                          &trans          &trans         /* | */    &trans         &trans
             >;
         };
 
-        system-fun_layer {  //4
-			display-name = "SYS";
+        right_symbols_layer {  //3
+            display-name = "RSY";
             bindings = <
-&bt BT_SEL 0  &bt BT_SEL 1   &bt BT_SEL 2    &none              &studio_unlock     /* | */        &kp K_VOL_UP    &none             &kp F20 /* mic */  &none            &none
-&bt BT_CLR    &bt BT_CLR_ALL &none           &none              &ext_power EP_TOG  /* | */        &kp K_MUTE      &kp K_PREV        &kp K_PLAY_PAUSE   &kp K_NEXT       &none
-&sys_reset    &bootloader    &soft_off       &out OUT_USB       &out OUT_BLE       /* | */        &kp K_VOL_DN    &none             &none              &bootloader      &sys_reset
+&trans         &trans       &trans        &trans          &trans         /* | */    &trans         &kp UNDER      &kp PIPE        &kp SQT        &trans
+&kp CARET      &kp STAR     &kp AMPS      &none           &trans         /* | */    &kp HASH       &kp TILDE      &kp FSLH        &kp DQT        &kp DLLR
+&trans         &trans       &trans        &trans          &trans         /* | */    &trans         &kp MINUS      &kp BSLH        &kp GRAVE      &trans
                             /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-                                            &none              &none               /* | */        &none          &none
+                                          &none           &trans         /* | */    &trans         &none
             >;
         };
 
-        swapper_layer { //5
-            display-name = "SWP";
-			bindings = <
-&none         &none         &kp LS(GRAVE)   &switcher       &none                  /* | */        &none            &none          	&none  			      &none             &none
-&none         &none         &kp LS(TAB)     &tabber         &none                  /* | */        &none            &none          	&none  			      &none             &none
-&none         &none         &kp LS(TAB)     &swapper        &none                  /* | */        &none            &none          	&none  			      &none             &none
-                            /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-                                            &none           &none                  /* | */        &none            &none
-			>;
-		};
+        left_symbols_layer {  //4
+            display-name = "LSY";
+            bindings = <
+&trans         &kp COLON    &kp LT        &kp GT          &kp SEMI       /* | */    &trans         &trans         &trans          &trans         &trans
+&kp LBRC       &kp RBRC     &kp LPAR      &kp RPAR        &kp AT         /* | */    &trans         &none          &kp EQUAL       &kp PLUS       &kp PERCENT
+&trans         &kp EXCL     &kp LBKT      &kp RBKT        &trans         /* | */    &trans         &trans         &trans          &trans         &trans
+                            /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+                                          &kp C_VOL_DN    &trans         /* | */    &trans         &kp C_VOL_UP
+            >;
+        };
+
+        function_layer {  //5
+            display-name = "FUN";
+            bindings = <
+&trans         &trans       &trans        &trans          &trans         /* | */    &trans         &kp F7         &kp F8          &kp F9         &kp F10
+&trans         &none        &kp LC(LALT)  &trans          &trans         /* | */    &trans         &kp F4         &kp F5          &kp F6         &kp F11
+&trans         &trans       &trans        &trans          &trans         /* | */    &trans         &kp F1         &kp F2          &kp F3         &kp F12
+                            /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+                                          &trans          &trans         /* | */    &trans         &trans
+            >;
+        };
+
+        numbers_layer {  //6
+            display-name = "NUM";
+            bindings = <
+&kp KP_SLASH   &kp N7       &kp N8        &kp N9          &kp KP_PLUS    /* | */    &trans         &trans         &trans          &trans         &trans
+&kp N0         &kp N1       &kp N2        &kp N3          &kp KP_MINUS   /* | */    &trans         &trans         &trans          &none          &trans
+&kp KP_MULTIPLY &kp N4      &kp N5        &kp N6          &kp KP_EQUAL   /* | */    &trans         &trans         &trans          &trans         &trans
+                            /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+                                          &trans          &trans         /* | */    &trans         &trans
+            >;
+        };
+
+        always_accessible_layer {  //7
+            display-name = "ALW";
+            bindings = <
+&trans         &trans       &kp COLON     &kp ESC         &trans         /* | */    &trans         &trans         &trans          &trans         &kp DEL
+&trans         &kp PERCENT  &kp FSLH      &kp ENTER       &trans         /* | */    &to MOU        &kp LGUI       &trans          &trans         &trans
+&trans         &trans       &trans        &kp EXCL        &trans         /* | */    &to BAS        &trans         &hmr RALT COMMA &hmr RCTRL DOT &bootloader
+                            /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+                                          &trans          &kp TAB        /* | */    &none          &trans
+            >;
+        };
+
+        gaming_layer {  //8
+            display-name = "GAM";
+            bindings = <
+&kp Q          &kp W        &kp E         &kp R           &kp T          /* | */    &kp Y          &kp U          &kp I           &kp O          &kp P
+&kp A          &kp S        &kp D         &kp F           &kp G          /* | */    &kp H          &kp J          &kp K           &kp L          &kp SEMI
+&kp Z          &kp X        &kp C         &kp V           &kp B          /* | */    &kp N          &kp M          &kp COMMA       &kp DOT        &kp FSLH
+                            /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+                                          &kp N0          &kp BSPC       /* | */    &kp SPACE      &trans
+            >;
+        };
+
+        system_layer {  //9
+            display-name = "SYS";
+            bindings = <
+&bt BT_SEL 0   &bt BT_SEL 1   &bt BT_SEL 2 &none          &studio_unlock    /* | */ &kp K_VOL_UP   &none          &kp F20 /* mic */ &none        &none
+&bt BT_CLR     &bt BT_CLR_ALL &none        &none          &ext_power EP_TOG /* | */ &kp K_MUTE     &kp K_PREV     &kp K_PLAY_PAUSE &kp K_NEXT    &none
+&sys_reset     &bootloader    &soft_off    &out OUT_USB   &out OUT_BLE      /* | */ &kp K_VOL_DN   &none          &none           &bootloader    &sys_reset
+                            /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+                                          &none           &none          /* | */    &none          &none
+            >;
+        };
     };
 };
