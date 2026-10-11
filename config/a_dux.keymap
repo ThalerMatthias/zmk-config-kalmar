@@ -33,14 +33,18 @@
 #define SYS 9  // ZMK-only: bluetooth / output / power
 
 / {
-    conditional_layers {
-        compatible = "zmk,conditional-layers";
+    combos {
+        compatible = "zmk,combos";
 
-        // ZMK addition: hold both ring-finger layer keys (S + L) for the
-        // bluetooth/system layer. The QMK board is wired and has no such layer.
+        // ZMK addition: press S + L together and hold for the bluetooth/system
+        // layer. The QMK board is wired and has no such layer.
+        // (A FUN+NUM conditional layer can't work here: once S activates FUN,
+        // the L position resolves to F6 instead of the NUM layer-tap.)
         sys_layer {
-            if-layers = <FUN NUM>;
-            then-layer = <SYS>;
+            timeout-ms = <50>;
+            key-positions = <11 18>;
+            bindings = <&mo SYS>;
+            layers = <BAS>;
         };
     };
 };
